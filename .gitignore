@@ -1,0 +1,21 @@
+# Data en gegenereerde bestanden (te groot voor Git)
+output/
+rulings.json
+rulings.csv
+thema_labels.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.part
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# IDE / OS
+.idea/
+.DS_Store
+
+# Streamlit secrets (nooit committen!)
+.streamlit/secrets.toml

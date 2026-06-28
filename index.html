@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voorafgaande beslissingen — zoeken</title>
+<style>
+  :root{--bg:#f7f8fa;--card:#fff;--line:#e2e5ea;--ink:#1c2330;--muted:#667085;--accent:#1463b8;--accent-bg:#e8f1fb;--circ:#7a4ec2;--circ-bg:#f1ebfa;--rul:#0a7d5a;--rul-bg:#e6f5ef;}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:16px 22px}
+  header h1{font-size:18px;margin:0}
+  header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  .wrap{display:flex;gap:18px;padding:18px;align-items:flex-start;max-width:1240px;margin:0 auto}
+  .side{flex:0 0 330px}
+  .main{flex:1;min-width:0}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+  .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 10px}
+  input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:inherit}
+  .tree,.flist{max-height:40vh;overflow:auto;margin-top:4px}
+  .code-grp>summary{font-weight:600;cursor:pointer;padding:5px 2px}
+  .art,.frow{display:flex;justify-content:space-between;align-items:center;padding:3px 6px;border-radius:6px;cursor:pointer}
+  .art:hover,.frow:hover{background:var(--accent-bg)}
+  .art .cnt,.frow .cnt{color:var(--muted);font-size:12px}
+  details.art-node>summary{list-style:none;cursor:pointer;padding:3px 6px;border-radius:6px;display:flex;justify-content:space-between}
+  details.art-node>summary:hover{background:var(--accent-bg)}
+  details.art-node>summary::-webkit-details-marker{display:none}
+  .sub{margin:2px 0 6px 14px;border-left:2px solid var(--line);padding-left:8px}
+  .sub .art{font-size:13px}
+  .chip{display:inline-flex;align-items:center;gap:8px;border-radius:20px;padding:4px 12px;font-size:13px;margin:0 8px 8px 0;border:1px solid}
+  .chip.t-article{background:var(--accent-bg);color:var(--accent);border-color:#bcd8f5}
+  .chip.t-circ{background:var(--circ-bg);color:var(--circ);border-color:#d8c8f0}
+  .chip.t-ruling{background:var(--rul-bg);color:var(--rul);border-color:#bfe3d4}
+  .chip.t-keyword,.chip.t-wetboek,.chip.t-lang{background:#eef1f5;color:#3a4151;border-color:var(--line)}
+  .chip.neg{background:#fcebeb;color:#a32d2d;border-color:#f09595;text-decoration:line-through}
+  .chip button{border:none;background:none;color:inherit;cursor:pointer;font-size:15px;line-height:1}
+  .count{color:var(--muted);font-size:13px;margin:2px 0 12px}
+  .res{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+  .res .nr{font-weight:600}
+  .res .date{color:var(--muted);font-size:13px;margin-left:8px}
+  .res .sum{margin:8px 0;color:#33384a;font-size:14px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .tag{border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer;border:1px solid var(--line);background:#eef1f5;color:#3a4151}
+  .tag:hover{filter:brightness(.97)}
+  .tag.t-circ{background:var(--circ-bg);color:var(--circ);border-color:#d8c8f0}
+  .tag.t-ruling{background:var(--rul-bg);color:var(--rul);border-color:#bfe3d4}
+  .tag.hit{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:8px 0 2px}
+  a.ext{font-size:13px;color:var(--accent);text-decoration:none}
+  a.ext:hover{text-decoration:underline}
+  .note{background:#fff8e6;border:1px solid #f0e0a8;border-radius:8px;padding:8px 11px;font-size:12.5px;color:#6b5b16;margin-bottom:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Voorafgaande beslissingen: zoekmachine</h1>
+  <p style="margin:2px 0 0">door <a href="https://www.linkedin.com/in/kurt-schaut/" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">Kurt Schaut</a></p>
+</header>
+
+<div class="wrap">
+  <div class="side">
+    <div class="panel">
+      <h2>Actieve filters</h2>
+      <div id="active"><span style="color:var(--muted);font-size:13px">nog geen filter gekozen</span></div>
+    </div>
+    <div class="panel">
+      <h2>Vrije tekst</h2>
+      <input type="text" id="q" placeholder="zoek in samenvatting of nummer…">
+    </div>
+    <div class="panel">
+      <h2>Artikel zoeken &amp; kiezen — cumulatief, max 3</h2>
+      <input type="text" id="artSearch" placeholder="bv. 47 §4  ·  205/1  ·  44 btw" autocomplete="off">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);margin-top:6px">
+        <input type="checkbox" id="artExclude"> uitsluiten — toon beslissingen zónder dit artikel
+      </label>
+      <div class="flist" id="artSug" style="margin-top:6px;max-height:220px"></div>
+    </div>
+    <div class="panel">
+      <h2>Trefwoord (DVB)</h2>
+      <input type="text" id="kwSearch" placeholder="zoek trefwoord…" autocomplete="off" style="margin-bottom:6px">
+      <div class="flist" id="kwList"></div>
+    </div>
+    <div class="panel">
+      <h2>Wetsartikel — bladeren (hiërarchisch)</h2>
+      <div class="tree" id="tree"></div>
+    </div>
+    <div class="panel">
+      <h2>Circulaire</h2>
+      <div class="flist" id="circList"></div>
+    </div>
+    <div class="panel">
+      <h2>Verwijst naar beslissing</h2>
+      <div class="flist" id="rulList"></div>
+    </div>
+    <div class="panel">
+      <h2>Taal</h2>
+      <div class="flist" id="langList"></div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="note" id="srcnote"></div>
+    <div class="count" id="count"></div>
+    <div id="results"></div>
+    <div style="color:var(--muted);font-size:11px;margin-top:18px;border-top:.5px solid var(--line);padding-top:10px">
+      Onafhankelijke zoekhulp op basis van openbaar gepubliceerde voorafgaande beslissingen. Geen officiële bron — de volledige, authentieke tekst staat op Fisconetplus (link per resultaat). De extractie van wetsartikelen en samenvattingen gebeurt automatisch en kan onvolledig of onjuist zijn.
+    </div>
+  </div>
+</div>
+
+<script>
+const SAMPLE = [
+ {nr:"2026.0161",date:"2026-04-21",guid:"dd3a5be8-4b9c-426a-8adf-7fc0cd9b482b",language:"nl",
+  keywords:["roerend inkomen","herstructurering","exitheffing"],
+  summary:"Inkomstenbelasting - Roerend inkomen - Belastingneutrale herstructurering",
+  articles:[{code:"WIB92",article:"18",lid:1,point:2,point_suffix:"quater"},{code:"WIB92",article:"18",lid:1,point:2,point_suffix:null},{code:"WIB92",article:"19bis"},{code:"WIB92",article:"21"},{code:"WIB92",article:"211"}],
+  cited_rulings:["2019.0236"], circulaires:[]},
+ {nr:"2026.0190",date:"2026-05-05",guid:"00000000-0000-0000-0000-000000000190",language:"nl",
+  keywords:["inbreng","herstructurering","fusie"],
+  summary:"Vennootschapsbelasting - Inbreng - Belastingneutrale verrichting",
+  articles:[{code:"WIB92",article:"184bis"},{code:"WIB92",article:"203"},{code:"WIB92",article:"344",par:1},{code:"WVV",article:"1"}],
+  cited_rulings:[], circulaires:["2020/C/95"]},
+ {nr:"2026.0228",date:"2026-05-12",guid:"4fd75946-576b-4b8a-95d1-3026aac4ddc4",language:"nl",
+  keywords:["btw","vastgoed","vruchtgebruik"],
+  summary:"BTW - Uitponden van vastgoed - Beroepsoprichter - Recht op aftrek",
+  articles:[{code:"W.BTW",article:"1",par:9,point:1},{code:"W.BTW",article:"44",par:3,point:1,letter:"a",lid:2},{code:"W.BTW",article:"45",par:1}],
+  cited_rulings:[], circulaires:[]},
+ {nr:"2025.0285",date:"2025-06-10",guid:"00000000-0000-0000-0000-000000000285",language:"fr",
+  keywords:["auteursrecht","roerend inkomen"],
+  summary:"Impôt sur les revenus - Droits d'auteur - Qualification de revenu mobilier",
+  articles:[{code:"WIB92",article:"17",par:1,point:5},{code:"WIB92",article:"37"}],
+  cited_rulings:["2017.0044","2021.1179"], circulaires:["2020/C/95"]},
+ {nr:"2025.0151",date:"2025-04-15",guid:"00000000-0000-0000-0000-000000000151",language:"nl",
+  keywords:["vrijgesteld inkomen","doctoraatsbeurs"],
+  summary:"Vrijgesteld inkomen - Doctoraatsbeurs - Vrijstellingsvoorwaarden (geen wetsartikel geciteerd, wel circulaire)",
+  articles:[], cited_rulings:[], circulaires:["Ci.RH.241/596.009","Ci.RH.241/467.677"]},
+ {nr:"2026.0079",date:"2026-03-03",guid:"00000000-0000-0000-0000-000000000079",language:"nl",
+  keywords:["meerwaarde op aandelen","normaal beheer privévermogen","antimisbruik"],
+  summary:"Meerwaarde op aandelen - Normaal beheer privévermogen - Antimisbruik",
+  articles:[{code:"WIB92",article:"90",point:9},{code:"WIB92",article:"344",par:1}],
+  cited_rulings:["2015.430","2016.447","2017.645","2025.0896"], circulaires:[]},
+];
+
+const DOC_URL = g => "https://www.minfin.fgov.be/myminfin-web/pages/public/fisconet/document/"+g;
+let DATA = [];
+let filters = [];          // [{type:'article'|'circ'|'ruling', ...}]
+const MAX_ART = 3;
+let _limitMsg = false;
+
+function canon(a){
+  let p = ["art. "+a.article];
+  if(a.par!=null) p.push("§"+a.par);
+  if(a.lid!=null) p.push(a.lid+"e lid");
+  if(a.point!=null) p.push(a.point+"°"+(a.point_suffix||""));
+  if(a.letter) p.push(a.letter+")");
+  return p.join(", ") + (a.code? " "+a.code : "");
+}
+function subKey(a){return [a.par,a.lid,a.point,a.point_suffix,a.letter].map(x=>x==null?"":x).join("|");}
+function matchesArticle(a, f){
+  if(f.code!=null && a.code!==f.code) return false;
+  if(f.article!=null && a.article!==f.article) return false;
+  for(const k of ["par","lid","point","point_suffix","letter"]){
+    if(f[k]!==undefined && (a[k]??null)!==f[k]) return false;
+  }
+  return true;
+}
+function baseMatch(r, f){
+  if(f.type==="article") return (r.articles||[]).some(a=>matchesArticle(a,f));
+  if(f.type==="circ")    return (r.circulaires||[]).includes(f.value);
+  if(f.type==="ruling")  return (r.cited_rulings||[]).includes(f.value);
+  if(f.type==="keyword") return (r.keywords||[]).includes(f.value);
+  if(f.type==="lang")    return (r.language||"")===f.value;
+  if(f.type==="wetboek") return (r.articles||[]).some(a=>a.code===f.value);
+  return true;
+}
+function matchesFilter(r, f){ const m=baseMatch(r,f); return f.neg ? !m : m; }
+function filterLabel(f){ return (f.neg?"zonder ":"")+baseLabel(f); }
+function baseLabel(f){
+  if(f.type==="article") return canon({article:f.article,code:f.code,par:f.par,lid:f.lid,point:f.point,point_suffix:f.point_suffix,letter:f.letter});
+  if(f.type==="circ") return "circ. "+f.value;
+  if(f.type==="ruling") return "→ "+f.value;
+  if(f.type==="keyword") return f.value;
+  if(f.type==="lang") return (f.value||"").toUpperCase();
+  if(f.type==="wetboek") return f.value;
+}
+function sameFilter(a,b){return a.type===b.type && filterLabel(a)===filterLabel(b);}
+
+function addFilter(f){
+  if(filters.some(x=>sameFilter(x,f))) return;
+  if(f.type==="article" && filters.filter(x=>x.type==="article").length>=MAX_ART){ _limitMsg=true; render(); setTimeout(()=>{_limitMsg=false;render();},2500); return; }
+  filters.push(f); render();
+}
+function removeFilter(i){ filters.splice(i,1); render(); }
+function clearAll(){ filters=[]; render(); }
+
+// ---- facetten ----
+function buildArticleTree(rows){
+  const src = rows||DATA;
+  const byCode = {};
+  src.forEach(r => (r.articles||[]).forEach(a=>{
+    if(!a.code) return;
+    byCode[a.code] = byCode[a.code] || {};
+    byCode[a.code][a.article] = byCode[a.code][a.article] || {count:0, subs:{}};
+    byCode[a.code][a.article].count++;
+    const sk = subKey(a);
+    if(sk){ byCode[a.code][a.article].subs[sk] = byCode[a.code][a.article].subs[sk] || {a,count:0}; byCode[a.code][a.article].subs[sk].count++; }
+  }));
+  const tree = document.getElementById('tree'); tree.innerHTML="";
+  Object.keys(byCode).sort().forEach(code=>{
+    const grp=document.createElement('details'); grp.className="code-grp"; grp.open=Object.keys(byCode).length<=2;
+    const sm=document.createElement('summary'); sm.textContent=code; grp.appendChild(sm);
+    const _arts=Object.keys(byCode[code]);
+    const _shown=_arts.slice().sort((x,y)=>(parseInt(x)-parseInt(y))||x.localeCompare(y));
+    _shown.forEach(art=>{
+      const node=byCode[code][art]; const subKeys=Object.keys(node.subs);
+      if(subKeys.length===0){ grp.appendChild(artRow(node.count,{type:'article',code,article:art})); }
+      else{
+        const det=document.createElement('details'); det.className="art-node";
+        const s=document.createElement('summary');
+        s.innerHTML=`<span>art. ${art} <span style="color:var(--muted)">▾</span></span><span class="cnt">${node.count}</span>`;
+        s.addEventListener('click',e=>{ if(e.offsetX < s.clientWidth-26){ e.preventDefault(); addFilter({type:'article',code,article:art}); }});
+        det.appendChild(s);
+        const box=document.createElement('div'); box.className="sub";
+        box.appendChild(artRow(node.count,{type:'article',code,article:art},"alle leden/punten"));
+        subKeys.map(k=>node.subs[k]).sort((p,q)=>q.count-p.count).forEach(({a,count})=>{
+          box.appendChild(artRow(count,{type:'article',code,article:art,par:a.par??null,lid:a.lid??null,point:a.point??null,point_suffix:a.point_suffix??null,letter:a.letter??null},canon(a)));
+        });
+        det.appendChild(box); grp.appendChild(det);
+      }
+    });
+    if(_arts.length>_shown.length){ const n=document.createElement('div'); n.style.cssText="color:var(--muted);font-size:11px;padding:3px 6px"; n.textContent="+"+(_arts.length-_shown.length)+" artikelen — gebruik 'Artikel zoeken'"; grp.appendChild(n); }
+    tree.appendChild(grp);
+  });
+}
+function artRow(count,filter,label){
+  const d=document.createElement('div'); d.className="art";
+  d.innerHTML=`<span>${label||("art. "+filter.article+" "+filter.code)}</span><span class="cnt">${count}</span>`;
+  d.addEventListener('click',()=>addFilter(filter)); return d;
+}
+function rowsFacet(counts, elId, makeFilter, labelFn, alpha){
+  const el=document.getElementById(elId); el.innerHTML="";
+  const items=Object.entries(counts).sort(alpha?(a,b)=>a[0].localeCompare(b[0],'nl'):(a,b)=>b[1]-a[1]);
+  if(!items.length){ el.innerHTML='<span style="color:var(--muted);font-size:12px">geen</span>'; return; }
+  const CAP=50;
+  items.slice(0,CAP).forEach(([v,c])=>{
+    const d=document.createElement('div'); d.className="frow";
+    d.innerHTML=`<span>${esc(labelFn?labelFn(v):v)}</span><span class="cnt">${c}</span>`;
+    d.addEventListener('click',()=>addFilter(makeFilter(v))); el.appendChild(d);
+  });
+  if(items.length>CAP){ const n=document.createElement('div'); n.style.cssText="color:var(--muted);font-size:11px;padding:4px 6px"; n.textContent="+"+(items.length-CAP)+" meer (verfijn met een filter of vrije tekst)"; el.appendChild(n); }
+}
+function buildListFacet(field, elId, type, rows, alpha){
+  const counts={};
+  (rows||DATA).forEach(r=>(r[field]||[]).forEach(v=>counts[v]=(counts[v]||0)+1));
+  rowsFacet(counts, elId, v=>({type,value:v}), null, alpha);
+}
+function buildWetboekFacet(rows){
+  const counts={};
+  (rows||DATA).forEach(r=>{ const s=new Set((r.articles||[]).map(a=>a.code).filter(Boolean)); s.forEach(c=>counts[c]=(counts[c]||0)+1); });
+  rowsFacet(counts, "wbList", v=>({type:'wetboek',value:v}));
+}
+function buildLangFacet(rows){
+  const counts={}; (rows||DATA).forEach(r=>{ if(r.language) counts[r.language]=(counts[r.language]||0)+1; });
+  const names={nl:"Nederlands",fr:"Frans",de:"Duits"};
+  rowsFacet(counts, "langList", v=>({type:'lang',value:v}), v=>names[v]||v);
+}
+let lastRows=[];
+function buildKwFacet(rows){
+  const counts={}; (rows||DATA).forEach(r=>(r.keywords||[]).forEach(v=>counts[v]=(counts[v]||0)+1));
+  const q=(document.getElementById('kwSearch').value||"").trim().toLowerCase();
+  const filtered={}; for(const [v,c] of Object.entries(counts)){ if(!q || v.toLowerCase().includes(q)) filtered[v]=c; }
+  rowsFacet(filtered, "kwList", v=>({type:'keyword',value:v}), null, true);
+}
+
+let ARTCAT=[];
+function cleanArtFilter(a){const f={type:'article',code:a.code,article:a.article};['par','lid','point','point_suffix','letter'].forEach(k=>{if(a[k]!=null)f[k]=a[k];});return f;}
+function buildArtCatalog(){
+  const acount={}, ccount={}, cmeta={};
+  DATA.forEach(r=>{
+    const aset=new Set(), cset=new Set();
+    (r.articles||[]).forEach(a=>{ if(!a.code) return;
+      const ak=a.code+"||"+a.article; aset.add(ak);
+      const cl=canon(a); cset.add(cl); cmeta[cl]=cleanArtFilter(a);
+    });
+    aset.forEach(k=>acount[k]=(acount[k]||0)+1);
+    cset.forEach(k=>ccount[k]=(ccount[k]||0)+1);
+  });
+  const cat=[];
+  Object.keys(acount).forEach(k=>{const p=k.split("||");cat.push({label:"art. "+p[1]+" "+p[0]+" — alle leden/punten",count:acount[k],filter:{type:'article',code:p[0],article:p[1]}});});
+  Object.keys(ccount).forEach(cl=>cat.push({label:cl,count:ccount[cl],filter:cmeta[cl]}));
+  cat.forEach(e=>{e.search=(e.label+" "+e.label.replace(/[§°.,)]/g," ")).toLowerCase().replace(/\s+/g," ");e.artnum=((e.filter.article||"").match(/^\d+/)||[""])[0];});
+  cat.sort((a,b)=>b.count-a.count);
+  ARTCAT=cat;
+}
+function renderArtSug(){
+  const q=(document.getElementById('artSearch').value||"").trim().toLowerCase();
+  const el=document.getElementById('artSug'); el.innerHTML="";
+  if(!q){ el.innerHTML='<div style="color:var(--muted);font-size:12px">typ een artikelnummer, bv. 47 §4 of 205/1</div>'; return; }
+  const toks=q.split(/\s+/);
+  const hits=ARTCAT.filter(e=>toks.every(t=> /^\d+$/.test(t) ? e.artnum===t : e.search.includes(t))).slice(0,12);
+  if(!hits.length){ el.innerHTML='<div style="color:var(--muted);font-size:12px">geen artikel gevonden</div>'; return; }
+  const neg=document.getElementById('artExclude').checked;
+  hits.forEach(h=>{const d=document.createElement('div');d.className="frow";d.innerHTML='<span>'+(neg?'<span style="color:#a32d2d">zonder</span> ':'')+esc(h.label)+'</span><span class="cnt">'+h.count+'</span>';d.onclick=()=>{addFilter(Object.assign({},h.filter,{neg}));document.getElementById('artSearch').value="";document.getElementById('artExclude').checked=false;renderArtSug();};el.appendChild(d);});
+}
+function render(){
+  const q=document.getElementById('q').value.trim().toLowerCase();
+  const act=document.getElementById('active'); act.innerHTML="";
+  if(!filters.length){ act.innerHTML='<span style="color:var(--muted);font-size:13px">nog geen filter gekozen</span>'; }
+  filters.forEach((f,i)=>{
+    const chip=document.createElement('span'); chip.className="chip t-"+f.type+(f.neg?" neg":"");
+    chip.innerHTML=`${filterLabel(f)} <button title="verwijder">×</button>`;
+    chip.querySelector('button').onclick=()=>removeFilter(i); act.appendChild(chip);
+  });
+  if(filters.length){ const c=document.createElement('button'); c.textContent="alles wissen"; c.style.cssText="border:none;background:none;color:var(--accent);cursor:pointer;font-size:12px"; c.onclick=clearAll; act.appendChild(c); }
+  if(filters.length>1){ const h=document.createElement('div'); h.style.cssText="font-size:12px;color:var(--muted);margin-top:4px"; h.textContent="cumulatief (EN): enkel beslissingen die aan álle filters voldoen"; act.appendChild(h); }
+  if(_limitMsg){ const w=document.createElement('div'); w.style.cssText="font-size:12px;color:#b4530a;margin-top:4px"; w.textContent="Maximaal "+MAX_ART+" wetsartikelen tegelijk."; act.appendChild(w); }
+
+  let rows=DATA.filter(r=>{
+    if(!filters.every(f=>matchesFilter(r,f))) return false;
+    if(q && !(r._hay||"").includes(q)) return false;
+    return true;
+  });
+  rows.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  // faceted search: tellingen herrekenen binnen de huidige selectie
+  lastRows=rows;
+  buildLangFacet(rows); buildArticleTree(rows);
+  buildKwFacet(rows);
+  buildListFacet("circulaires","circList","circ",rows);
+  buildListFacet("cited_rulings","rulList","ruling",rows);
+  document.getElementById('count').textContent=`${rows.length} beslissing(en)`+(filters.length?` · ${filters.map(filterLabel).join(" EN ")}`:"")+(q?` · tekst "${q}"`:"");
+
+  const out=document.getElementById('results'); out.innerHTML="";
+  rows.slice(0,300).forEach(r=>{
+    const div=document.createElement('div'); div.className="res";
+    const lang=r.language?` · <span style="color:var(--muted);font-size:12px">${r.language.toUpperCase()}</span>`:"";
+    div.innerHTML=`<div><span class="nr">${r.nr||"?"}</span><span class="date">${r.date||""}</span>${lang} &nbsp; <a class="ext" href="${r.url||DOC_URL(r.guid)}" target="_blank" rel="noopener">↗ Fisconetplus</a></div>
+      ${r.summary?`<div style="color:var(--muted);font-size:12px;margin-top:4px">${esc(r.summary)}</div>`:""}
+      ${r.samenvatting?`<div class="sum">${esc(r.samenvatting)}</div>`:""}`;
+    out.appendChild(div);
+  });
+}
+function dedupe(arr){return [...new Set(arr)].sort();}
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+async function init(){
+  let src="ingebouwde voorbeelddata (6 beslissingen)";
+  try{ const r=await fetch("site_data.json",{cache:"no-store"}); if(r.ok){ const j=await r.json(); if(Array.isArray(j)&&j.length){ DATA=j; src=`site_data.json (${j.length} beslissingen)`; } } }catch(e){}
+  if(!DATA.length) DATA=SAMPLE;
+  // zoektekst vooraf indexeren (1x) i.p.v. per toetsaanslag herberekenen
+  DATA.forEach(r=>{ r._hay=((r.nr||"")+" "+(r.summary||"")+" "+(r.samenvatting||"")+" "+(r.articles||[]).map(canon).join(" ")+" "+(r.keywords||[]).join(" ")+" "+(r.circulaires||[]).join(" ")+" "+(r.cited_rulings||[]).join(" ")).toLowerCase(); });
+  document.getElementById('srcnote').textContent="Bron: "+src+". Maak site_data.json met build_web.py en plaats het naast dit bestand.";
+  buildArtCatalog(); renderArtSug();
+  render();
+  let _rt; const dRender=()=>{clearTimeout(_rt);_rt=setTimeout(render,250);};
+  let _at; const dSug=()=>{clearTimeout(_at);_at=setTimeout(renderArtSug,150);};
+  document.getElementById('q').addEventListener('input',dRender);
+  document.getElementById('artSearch').addEventListener('input',dSug);
+  document.getElementById('artExclude').addEventListener('change',renderArtSug);
+  document.getElementById('kwSearch').addEventListener('input',()=>buildKwFacet(lastRows));
+}
+init();
+</script>
+</body>
+</html>
