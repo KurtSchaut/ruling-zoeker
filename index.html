@@ -342,12 +342,14 @@ function dedupe(arr){return [...new Set(arr)].sort();}
 function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
 async function init(){
-  let src="ingebouwde voorbeelddata (6 beslissingen)";
-  try{ const r=await fetch("site_data.json",{cache:"no-store"}); if(r.ok){ const j=await r.json(); if(Array.isArray(j)&&j.length){ DATA=j; src=`site_data.json (${j.length} beslissingen)`; } } }catch(e){}
+  let loaded=false;
+  try{ const r=await fetch("site_data.json",{cache:"no-store"}); if(r.ok){ const j=await r.json(); if(Array.isArray(j)&&j.length){ DATA=j; loaded=true; } } }catch(e){}
   if(!DATA.length) DATA=SAMPLE;
   // zoektekst vooraf indexeren (1x) i.p.v. per toetsaanslag herberekenen
   DATA.forEach(r=>{ r._hay=((r.nr||"")+" "+(r.summary||"")+" "+(r.samenvatting||"")+" "+(r.articles||[]).map(canon).join(" ")+" "+(r.keywords||[]).join(" ")+" "+(r.circulaires||[]).join(" ")+" "+(r.cited_rulings||[]).join(" ")).toLowerCase(); });
-  document.getElementById('srcnote').textContent="Bron: "+src+". Maak site_data.json met build_web.py en plaats het naast dit bestand.";
+  const _note=document.getElementById('srcnote');
+  if(loaded){ _note.style.display="none"; }
+  else { _note.textContent="Voorbeelddata geladen. Plaats site_data.json (gemaakt met build_web.py) naast dit bestand voor de volledige databank."; }
   buildArtCatalog(); renderArtSug();
   render();
   let _rt; const dRender=()=>{clearTimeout(_rt);_rt=setTimeout(render,250);};
