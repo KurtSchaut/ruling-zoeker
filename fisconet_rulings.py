@@ -316,26 +316,40 @@ def search_page(session: requests.Session, page: int, size: int,
         },
         "paginationParameters": {"currentPageNumber": page, "pageSize": size},
     }
-    r = session.post(BASE + "/search", data=json.dumps(body), timeout=30)
-    r.raise_for_status()
-    return r.json()["data"]
+    last = None
+    for attempt in range(4):
+        try:
+            r = session.post(BASE + "/search", data=json.dumps(body), timeout=(10, 60))
+            r.raise_for_status()
+            return r.json()["data"]
+        except Exception as e:
+            last = e
+            time.sleep(2 * (attempt + 1))
+    raise last
 
 
 def get_document(session: requests.Session, guid: str):
-    """Retourneer (metadata, platte_tekst) voor een beslissing."""
-    r = session.get(BASE + "/document/" + guid, timeout=30)
-    r.raise_for_status()
-    data = r.json()["data"]
-    raw_b64 = data["content"]["content"]
-    raw_html = base64.b64decode(raw_b64).decode("utf-8", errors="replace")
-    text = re.sub(r"<[^>]+>", " ", raw_html)
-    text = html.unescape(text)  # &#160; e.d. decoderen
-    return data["metadata"], text
+    """Retourneer (metadata, platte_tekst) voor een beslissing (met herpogingen)."""
+    last = None
+    for attempt in range(4):
+        try:
+            r = session.get(BASE + "/document/" + guid, timeout=(10, 60))
+            r.raise_for_status()
+            data = r.json()["data"]
+            raw_b64 = data["content"]["content"]
+            raw_html = base64.b64decode(raw_b64).decode("utf-8", errors="replace")
+            text = re.sub(r"<[^>]+>", " ", raw_html)
+            text = html.unescape(text)  # &#160; e.d. decoderen
+            return data["metadata"], text
+        except Exception as e:
+            last = e
+            time.sleep(2 * (attempt + 1))
+    raise last
 
 
 def list_rulings(session: requests.Session, max_items: int) -> List[Dict]:
     """Haal de beslissingslijst op (gepagineerd)."""
-    page_size = 100
+    page_size = 500
     first = search_page(session, 0, page_size)
     total = first["pageProperties"]["total"]
     target = total if max_items in (0, None) else min(max_items, total)
@@ -345,7 +359,12 @@ def list_rulings(session: requests.Session, max_items: int) -> List[Dict]:
     page = 1
     while len(items) < target:
         time.sleep(REQUEST_DELAY_SECONDS)
-        data = search_page(session, page, page_size)
+        try:
+            data = search_page(session, page, page_size)
+        except Exception as e:
+            print(f"  ! lijst-pagina {page} mislukt na herpogingen ({e}); "
+                  f"gestopt met {len(items)} items.", file=sys.stderr)
+            break
         chunk = data["pageContents"]
         if not chunk:
             break
