@@ -43,6 +43,8 @@
   .res .nr{font-weight:600}
   .res .date{color:var(--muted);font-size:13px;margin-left:8px}
   .res .sum{margin:8px 0;color:#33384a;font-size:14px}
+  .res .sum p{margin:0 0 8px}
+  .res .sum p:last-child{margin-bottom:0}
   .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .tag{border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer;border:1px solid var(--line);background:#eef1f5;color:#3a4151}
   .tag:hover{filter:brightness(.97)}
@@ -80,6 +82,10 @@
       <div class="flist" id="artSug" style="margin-top:6px;max-height:220px"></div>
     </div>
     <div class="panel">
+      <h2>Bron</h2>
+      <div class="flist" id="bronList"></div>
+    </div>
+    <div class="panel">
       <h2>Trefwoord (DVB)</h2>
       <input type="text" id="kwSearch" placeholder="zoek trefwoord…" autocomplete="off" style="margin-bottom:6px">
       <div class="flist" id="kwList"></div>
@@ -99,10 +105,6 @@
     <div class="panel">
       <h2>Taal</h2>
       <div class="flist" id="langList"></div>
-    </div>
-    <div class="panel">
-      <h2>Bron</h2>
-      <div class="flist" id="bronList"></div>
     </div>
     <div class="panel">
       <h2>Verslagjaar (jaarverslag)</h2>
@@ -363,12 +365,36 @@ function render(){
     const linkTxt=jv?`↗ Jaarverslag (p.${r.pagina||"?"})`:(r.bron==="VLABEL"?"↗ VLABEL":"↗ Fisconetplus");
     div.innerHTML=`<div>${badge}<span class="nr">${esc(r.nr||"?")}</span><span class="date">${r.date||""}</span>${lang} &nbsp; <a class="ext" href="${r.url||DOC_URL(r.guid)}" target="_blank" rel="noopener">${linkTxt}</a></div>
       ${r.summary?`<div style="color:var(--muted);font-size:12px;margin-top:4px">${esc(r.summary)}</div>`:""}
-      ${r.samenvatting?`<div class="sum">${esc(r.samenvatting)}</div>`:""}`;
+      ${r.samenvatting?`<div class="sum">${formatSamenvatting(r)}</div>`:""}`;
     out.appendChild(div);
   });
 }
 function dedupe(arr){return [...new Set(arr)].sort();}
 function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function formatSamenvatting(r){
+  const text=String(r.samenvatting||"");
+  if(r.bron!=="jaarverslag") return esc(text);
+  return formatJaarverslagText(text);
+}
+function formatJaarverslagText(text){
+  const lines=text.replace(/\r\n?/g,"\n").split("\n").map(s=>s.trim()).filter(Boolean);
+  const paras=[]; let cur="";
+  const bullet=/^[•\-–]\s+/;
+  const numbered=/^\d+[.)]\s+/;
+  const startsNewParagraph=(prev,next)=>{
+    if(!prev) return false;
+    if(bullet.test(next)||numbered.test(next)) return true;
+    if(/[:;]\s*$/.test(prev)) return true;
+    return /[.!?]\s*$/.test(prev) && /^[A-ZÀ-ÖØ-Þ0-9‘“]/.test(next);
+  };
+  for(const line of lines){
+    if(!cur){ cur=line; continue; }
+    if(startsNewParagraph(cur,line)){ paras.push(cur); cur=line; }
+    else cur += (/[-–]\s*$/.test(cur) ? "" : " ") + line;
+  }
+  if(cur) paras.push(cur);
+  return paras.map(p=>`<p>${esc(p)}</p>`).join("");
+}
 
 async function init(){
   let loaded=false;
